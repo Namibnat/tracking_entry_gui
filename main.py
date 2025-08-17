@@ -6,6 +6,7 @@ from db import write_new_tracking_type
 
 CREATOR_METHOD = 0
 CREATOR_TITLE = 1
+WORK_GRID_ROWS = 7
 
 
 class AddItemDialog(tk.Toplevel):
@@ -15,7 +16,7 @@ class AddItemDialog(tk.Toplevel):
     def __init__(self, parent: tk.Tk):
         super().__init__(parent)
         self.title("Add Item")
-        self.resizable(False, False)
+        self.resizable(width=False, height=False)
         self.next_dropdown_row = 0
         self.notes_base_row = self.next_dropdown_row + 2
         self.drop_down_entry_counter = 0
@@ -190,7 +191,10 @@ class AddItemDialog(tk.Toplevel):
         drop_down_values = [v.get() for v in self.drop_down_str_values if v]
         self.new_field_values['drop-down'] = drop_down_values
         self.new_field_values['note'] = self.notes_selected.get()
-        write_new_tracking_type(self.new_field_values)
+        success = write_new_tracking_type(self.new_field_values)
+        if not success:
+            # TODO: add error...
+            return
         self.destroy()
 
 
@@ -208,8 +212,7 @@ class MainView(ttk.Frame):
             borderwidth=1,
             relief='solid'
         )
-        frame_heights = 50*7 - (7*2)
-        selection_frame = ttk.Frame(self, width=250, height=frame_heights)
+        selection_frame = ttk.Frame(self, width=250)
         selection_frame.grid(
             row=0,
             column=0,
@@ -332,13 +335,13 @@ class MainView(ttk.Frame):
 
         work_grid = ttk.Frame(self.panel_frame)
         today = datetime.datetime.now()
-        day_range = range(today.day, today.day-7, -1)
+        day_range = range(today.day, today.day-WORK_GRID_ROWS, -1)
         past_week_date_strs = (self._get_date_range(today, day) for day in day_range)
         # TODO: fills to be updated from DB
         fills = {
             'date': [date for date in past_week_date_strs],
-            'drop-down': ['drop-down thingi'] * 7,
-            'notes': ['notes']*7
+            'drop-down': ['drop-down thingi'] * WORK_GRID_ROWS,
+            'notes': ['notes']*WORK_GRID_ROWS
         }
         creators = (
             (self._date_labels, 'date'),
@@ -346,7 +349,7 @@ class MainView(ttk.Frame):
             (self._notebook_maker, 'notes')
         )
 
-        for row in range(7):
+        for row in range(WORK_GRID_ROWS):
             for column, creator in enumerate(creators):
                 box = ttk.Frame(master=work_grid, width=182)
                 box.grid(

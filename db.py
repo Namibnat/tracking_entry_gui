@@ -1,3 +1,4 @@
+import json
 import os
 
 import psycopg2
@@ -68,7 +69,7 @@ def write_new_tracking_type(data: dict):
                 )
             VALUES (%s, %s, %s);
             """,
-            (title, drop_down_values, include_notes)
+            (title, json.dumps(drop_down_values), include_notes)
         )
-        cursor.commit()
-        return True
+    conn.commit()
+    return True
