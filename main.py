@@ -2,6 +2,8 @@ import datetime
 import tkinter as tk
 from tkinter import ttk
 
+from db import write_new_tracking_type
+
 CREATOR_METHOD = 0
 CREATOR_TITLE = 1
 
@@ -188,7 +190,7 @@ class AddItemDialog(tk.Toplevel):
         drop_down_values = [v.get() for v in self.drop_down_str_values if v]
         self.new_field_values['drop-down'] = drop_down_values
         self.new_field_values['note'] = self.notes_selected.get()
-        print(self.new_field_values)
+        write_new_tracking_type(self.new_field_values)
         self.destroy()
 
 
@@ -346,7 +348,7 @@ class MainView(ttk.Frame):
 
         for row in range(7):
             for column, creator in enumerate(creators):
-                box = ttk.Frame(master=work_grid, height=50, width=182, style="PA.TFrame")
+                box = ttk.Frame(master=work_grid, width=182)
                 box.grid(
                     row=row,
                     column=column,
@@ -365,10 +367,25 @@ class MainView(ttk.Frame):
                     pady=2,
                     ipadx=2,
                     ipady=2,
-                    sticky="nsew"
+                    sticky="e"
                 )
         work_grid.grid(row=3, column=0, sticky="nsew")
-        save_button = ttk.Button(master=work_grid, text="Save")
+        save_button_style = ttk.Style()
+        save_button_style.configure(
+            style="PA.TButton",
+            font=('Helvetica', 16)
+        )
+        save_button = ttk.Button(
+            self.panel_frame,
+            text="Save",
+            padding=16,
+            style="PA.TButton"
+        )
+        save_button.grid(
+            row=4,
+            column=0,
+            sticky="e"
+        )
 
 
 class App(tk.Tk):
