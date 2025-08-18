@@ -1,12 +1,30 @@
 import datetime
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 
-from db import write_new_tracking_type
+from db import write_new_tracking_type, add_record
 
 CREATOR_METHOD = 0
 CREATOR_TITLE = 1
 WORK_GRID_ROWS = 7
+
+
+def display_message(title, message, is_error=True):
+    """Message Modal
+
+    TODO: FIX OR MAKE A BETTER MODAL FOR IT.
+    """
+    if is_error:
+        messagebox.showerror(
+            title=title,
+            message=message
+        )
+    else:
+        messagebox.showinfo(
+            title=title,
+            message=message
+        )
 
 
 class AddItemDialog(tk.Toplevel):
@@ -193,7 +211,7 @@ class AddItemDialog(tk.Toplevel):
         self.new_field_values['note'] = self.notes_selected.get()
         success = write_new_tracking_type(self.new_field_values)
         if not success:
-            # TODO: add error...
+            display_message(title="Error", message="Record could not be saved")
             return
         self.destroy()
 
@@ -292,6 +310,26 @@ class MainView(ttk.Frame):
     def _notebook_maker(master, other_stuff=None):
         return ttk.Entry(master, width=25)
 
+    def _save_records(self):
+        # Get the records to save
+
+        new_record = {
+            'date': datetime.datetime.now(),
+            'entry_title': "Study X",
+            'drop-down': "Great",
+            'notes': "Good study session, and stuff"
+        }
+        success = add_record(new_record)
+        if success:
+            if not success:
+                display_message(
+                    title="Saved",
+                    message="Record saved successfully"
+                )
+            print("Good save")
+        else:
+            print("Not good")
+
     def _fill_panel_frame(self):
         self.panel_frame_style = ttk.Style()
         self.panel_frame_style.configure(
@@ -382,7 +420,8 @@ class MainView(ttk.Frame):
             self.panel_frame,
             text="Save",
             padding=16,
-            style="PA.TButton"
+            style="PA.TButton",
+            command=self._save_records
         )
         save_button.grid(
             row=4,
@@ -414,8 +453,8 @@ class App(tk.Tk):
         self.grid_columnconfigure(index=0, weight=1)
 
     def add_item_dialog(self):
-        dlg = AddItemDialog(self)
-        self.wait_window(dlg)
+        add_item_dialog = AddItemDialog(self)
+        self.wait_window(add_item_dialog)
 
 
 def main():

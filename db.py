@@ -1,5 +1,7 @@
 import json
 import os
+from contextlib import closing
+import datetime
 
 import psycopg2
 from dotenv import load_dotenv
@@ -36,12 +38,16 @@ def make_connection():
 
 def write_new_tracking_type(data: dict):
     """
-    Write a new habit meta data to db.
+    Write a new habit metadata to db.
 
-            self.new_field_values['title'] = title
-        drop_down_values = [v.get() for v in self.drop_down_str_values if v]
-        self.new_field_values['drop-down'] = drop_down_values
-        self.new_field_values['note'] = self.notes_selected.get()
+    sql:
+        CREATE TABLE IF NOT EXISTS habit_tracking_types
+        (
+            id SERIAL PRIMARY KEY,
+            title text,
+            drop_down_fields jsonb,
+            include_notes boolean
+        );
     :param data:
     :return:
     """
@@ -59,17 +65,79 @@ def write_new_tracking_type(data: dict):
     except Exception as e:
         print(str(e))
         return False
-    with conn.cursor() as cursor:
-        cursor.execute(
-            """
-            INSERT INTO habit_tracking_types (
-                title,
-                drop_down_fields,
-                include_notes
+    try:
+        with closing(conn):
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO habit_tracking_types (
+                        title,
+                        drop_down_fields,
+                        include_notes
+                        )
+                    VALUES (%s, %s, %s);
+                    """,
+                    (title, json.dumps(drop_down_values), include_notes)
                 )
-            VALUES (%s, %s, %s);
-            """,
-            (title, json.dumps(drop_down_values), include_notes)
-        )
-    conn.commit()
-    return True
+                conn.commit()
+                return True
+    except Exception as e:
+        print(str(e))
+        return False
+
+
+def add_record(data: dict):
+    """
+    Add or update a record
+
+    sql:
+        CREATE TABLE IF NOT EXISTS habit_tracking_fields (
+            id SERIAL PRIMARY KEY,
+            entry_date DATE NOT NULL,
+            entry_title TEXT NOT NULL,
+            outcome_option TEXT,
+            notes TEXT,
+            UNIQUE (entry_date, entry_title)
+        );
+    :return: Success status
+    :rtype: bool
+    """
+    conn = make_connection()
+    if not conn:
+        return False
+    try:
+        date = data.get('date')
+        entry_date = datetime.date(date.year, date.month, date.day)
+        entry_title = data.get('entry_title')
+        outcome_option = data.get('drop-down')
+        notes = data.get('notes', None)
+        assert isinstance(entry_title, str)
+        assert isinstance(outcome_option, str)
+        assert isinstance(notes, str)
+    except Exception as e:
+        print(str(e))
+        return False
+    try:
+        with closing(conn):
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO habit_tracking_fields (
+                        entry_date,
+                        entry_title,
+                        outcome_option,
+                        notes
+                        )
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (entry_date, entry_title)
+                    DO UPDATE SET
+                        outcome_option = EXCLUDED.outcome_option,
+                        notes = EXCLUDED.notes;
+                    """,
+                    (entry_date, entry_title, outcome_option, notes)
+                )
+                conn.commit()
+                return True
+    except Exception as e:
+        print(str(e))
+        return False
