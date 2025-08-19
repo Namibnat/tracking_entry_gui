@@ -329,6 +329,7 @@ class MainView(ttk.Frame):
 
     def _get_fields(self):
         fields = get_tracking_types()
+        # todo: pick up here....
 
         today = datetime.datetime.now()
         day_range = range(today.day, today.day-WORK_GRID_ROWS, -1)
