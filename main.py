@@ -3,7 +3,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
 
-from db import write_new_tracking_type, add_record
+from db import write_new_tracking_type, add_record, get_tracking_types
 
 CREATOR_METHOD = 0
 CREATOR_TITLE = 1
@@ -12,8 +12,6 @@ WORK_GRID_ROWS = 7
 
 def display_message(title, message, is_error=True):
     """Message Modal
-
-    TODO: FIX OR MAKE A BETTER MODAL FOR IT.
     """
     if is_error:
         messagebox.showerror(
@@ -33,6 +31,7 @@ class AddItemDialog(tk.Toplevel):
     """
     def __init__(self, parent: tk.Tk):
         super().__init__(parent)
+        self.result = False
         self.title("Add Item")
         self.resizable(width=False, height=False)
         self.next_dropdown_row = 0
@@ -213,6 +212,7 @@ class AddItemDialog(tk.Toplevel):
         if not success:
             display_message(title="Error", message="Record could not be saved")
             return
+        self.result = True
         self.destroy()
 
 
@@ -222,6 +222,8 @@ class MainView(ttk.Frame):
         super().__init__(master=parent, padding=12, style="DarkMain.TFrame")
         self.controller = controller
         self.panel_frame = ttk.Frame(self)
+        self.tracking_tasks = dict()
+        self.tracking_tasks = get_tracking_types()
 
         # Selection Section
         selection_grid_style = ttk.Style()
@@ -230,8 +232,8 @@ class MainView(ttk.Frame):
             borderwidth=1,
             relief='solid'
         )
-        selection_frame = ttk.Frame(self, width=250)
-        selection_frame.grid(
+        self.selection_frame = ttk.Frame(self, width=250)
+        self.selection_frame.grid(
             row=0,
             column=0,
             sticky="nsew",
@@ -240,41 +242,9 @@ class MainView(ttk.Frame):
             padx=12,
             pady=12
         )
-        track_tasks = [
-            'Study Biology Textbook',
-            'Study Udemy GIS course',
-            'Study Analysis of Biological Data Textbook',
-            'Study Udemy Python and Pandas',
-            'Study Udemy FastAPI',
-            'Worked on Sandcurves site'
-        ]
-        self.selection = track_tasks[0]
 
-        listbox = tk.Listbox(
-            selection_frame,
-            height=12,
-            selectmode="browse",
-            exportselection=False
-        )
-        scrollbar = ttk.Scrollbar(
-            master=selection_frame,
-            orient="vertical",
-            command=listbox.yview
-        )
-        listbox.config(yscrollcommand=scrollbar.set)
-
-        def on_select(event):
-            self.panel_frame.destroy()
-            self.selection = listbox.get(listbox.curselection())
-            self._fill_panel_frame()
-
-        listbox.bind("<<ListboxSelect>>", on_select)
-
-        listbox.grid(row=0, column=0, sticky="ns")
-        scrollbar.grid(row=0, column=1, sticky="ns")
-
-        for task in track_tasks:
-            listbox.insert("end", task)
+        # Selection Section
+        self._build_listbox()
 
         # Work Section
         self._fill_panel_frame()
@@ -289,6 +259,35 @@ class MainView(ttk.Frame):
         add_item_button.grid(row=0, column=0)
 
         footer.grid(row=1, column=0, columnspan=2, sticky="e", pady=(12, 0))
+        
+    def _build_listbox(self):
+        self.track_tasks = list(self.tracking_tasks.keys())
+        self.selection = self.track_tasks[0]
+        self.listbox = tk.Listbox(
+            self.selection_frame,
+            height=12,
+            selectmode="browse",
+            exportselection=False
+        )
+        scrollbar = ttk.Scrollbar(
+            master=self.selection_frame,
+            orient="vertical",
+            command=self.listbox.yview
+        )
+        self.listbox.config(yscrollcommand=scrollbar.set)
+
+        def on_select(event):
+            self.panel_frame.destroy()
+            self.selection = self.listbox.get(self.listbox.curselection())
+            self._fill_panel_frame()
+
+        self.listbox.bind("<<ListboxSelect>>", on_select)
+
+        self.listbox.grid(row=0, column=0, sticky="ns")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        for task in self.track_tasks:
+            self.listbox.insert("end", task)
 
     @staticmethod
     def _get_date_range(today, day):
@@ -312,7 +311,6 @@ class MainView(ttk.Frame):
 
     def _save_records(self):
         # Get the records to save
-
         new_record = {
             'date': datetime.datetime.now(),
             'entry_title': "Study X",
@@ -321,14 +319,32 @@ class MainView(ttk.Frame):
         }
         success = add_record(new_record)
         if success:
-            if not success:
-                display_message(
-                    title="Saved",
-                    message="Record saved successfully"
-                )
+            display_message(
+                title="Saved",
+                message="Record saved successfully"
+            )
             print("Good save")
         else:
             print("Not good")
+
+    def _get_fields(self):
+        fields = get_tracking_types()
+
+        today = datetime.datetime.now()
+        day_range = range(today.day, today.day-WORK_GRID_ROWS, -1)
+        past_week_date_strs = (self._get_date_range(today, day) for day in day_range)
+        # TODO: fills to be updated from DB
+        fills = {
+            'date': [date for date in past_week_date_strs],
+            'drop-down': ['drop-down thingi'] * WORK_GRID_ROWS,
+            'notes': ['notes']*WORK_GRID_ROWS
+        }
+        creators = (
+            (self._date_labels, 'date'),
+            (self._drop_down_maker, 'drop-down'),
+            (self._notebook_maker, 'notes')
+        )
+        return fills, creators
 
     def _fill_panel_frame(self):
         self.panel_frame_style = ttk.Style()
@@ -372,20 +388,7 @@ class MainView(ttk.Frame):
         gird_titles.grid(row=1, column=0, sticky="nsew")
 
         work_grid = ttk.Frame(self.panel_frame)
-        today = datetime.datetime.now()
-        day_range = range(today.day, today.day-WORK_GRID_ROWS, -1)
-        past_week_date_strs = (self._get_date_range(today, day) for day in day_range)
-        # TODO: fills to be updated from DB
-        fills = {
-            'date': [date for date in past_week_date_strs],
-            'drop-down': ['drop-down thingi'] * WORK_GRID_ROWS,
-            'notes': ['notes']*WORK_GRID_ROWS
-        }
-        creators = (
-            (self._date_labels, 'date'),
-            (self._drop_down_maker, 'drop-down'),
-            (self._notebook_maker, 'notes')
-        )
+        fills, creators = self._get_fields()
 
         for row in range(WORK_GRID_ROWS):
             for column, creator in enumerate(creators):
@@ -411,8 +414,8 @@ class MainView(ttk.Frame):
                     sticky="e"
                 )
         work_grid.grid(row=3, column=0, sticky="nsew")
-        save_button_style = ttk.Style()
-        save_button_style.configure(
+        panel_button_style = ttk.Style()
+        panel_button_style.configure(
             style="PA.TButton",
             font=('Helvetica', 16)
         )
@@ -428,6 +431,25 @@ class MainView(ttk.Frame):
             column=0,
             sticky="e"
         )
+        quit_button = ttk.Button(
+            self.panel_frame,
+            text="Quit",
+            padding=16,
+            style="PA.TButton",
+            command=self.controller.destroy
+        )
+        quit_button.grid(
+            row=4,
+            column=1,
+            sticky="e",
+            padx=(12, 0)
+        )
+
+    def refresh(self):
+        self.tracking_tasks = get_tracking_types()
+        self.listbox.destroy()
+        self._build_listbox()
+
 
 
 class App(tk.Tk):
@@ -455,6 +477,8 @@ class App(tk.Tk):
     def add_item_dialog(self):
         add_item_dialog = AddItemDialog(self)
         self.wait_window(add_item_dialog)
+        if add_item_dialog.result:
+            self.view.refresh()
 
 
 def main():

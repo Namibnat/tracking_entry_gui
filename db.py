@@ -86,6 +86,43 @@ def write_new_tracking_type(data: dict):
         return False
 
 
+def get_tracking_types():
+    """
+    Get data for all fields being tracked.
+
+    :return: fields or empty dict on failure
+    :rtype: dict
+    """
+    tracking_fields = dict()
+    conn = make_connection()
+    if not conn:
+        return tracking_fields
+
+    try:
+        with closing(conn):
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    SELECT
+                        title, drop_down_fields, include_notes
+                    FROM habit_tracking_types;
+                    """
+                )
+                data = cursor.fetchall()
+                for field in data:
+                    title = field[0]
+                    drop_down_fields = field[1]
+                    include_notes = field[2]
+                    tracking_fields[title] = {
+                        'drop-down-fields': drop_down_fields,
+                        'include_notes': include_notes
+                    }
+        return tracking_fields
+    except Exception as e:
+        print(str(e))
+        return tracking_fields
+
+
 def add_record(data: dict):
     """
     Add or update a record
