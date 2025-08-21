@@ -11,8 +11,7 @@ WORK_GRID_ROWS = 7
 
 
 def display_message(title, message, is_error=True):
-    """Message Modal
-    """
+    """Message Modal"""
     if is_error:
         messagebox.showerror(
             title=title,
@@ -26,9 +25,7 @@ def display_message(title, message, is_error=True):
 
 
 class AddItemDialog(tk.Toplevel):
-    """
-    Modal dialog for adding a new item.
-    """
+    """Modal dialog for adding a new item."""
     def __init__(self, parent: tk.Tk):
         super().__init__(parent)
         self.result = False
@@ -50,7 +47,7 @@ class AddItemDialog(tk.Toplevel):
         frm = ttk.Frame(master=self, padding=12)
         frm.grid(sticky="nsew")
         self.columnconfigure(index=0, weight=1)
-        self.rowconfigure(index=00, weight=1)
+        self.rowconfigure(index=0, weight=1)
 
         self.input_section = ttk.Frame(frm, padding=12)
 
@@ -259,7 +256,7 @@ class MainView(ttk.Frame):
         add_item_button.grid(row=0, column=0)
 
         footer.grid(row=1, column=0, columnspan=2, sticky="e", pady=(12, 0))
-        
+
     def _build_listbox(self):
         self.track_tasks = list(self.tracking_tasks.keys())
         self.selection = self.track_tasks[0]
@@ -462,7 +459,10 @@ class App(tk.Tk):
         menubar = tk.Menu(self)
         self.config(menu=menubar)
         file_menu = tk.Menu(menubar, tearoff=False)
-        file_menu.add_command(label="Add Item…", command=self.add_item_dialog)
+        file_menu.add_command(
+            label="Add Item…",
+            command=self.add_item_dialog
+        )
         file_menu.add_separator()
         file_menu.add_command(label="Quit", command=self.destroy)
         menubar.add_cascade(label="File", menu=file_menu)
@@ -489,3 +489,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
